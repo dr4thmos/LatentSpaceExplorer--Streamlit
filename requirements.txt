@@ -1,0 +1,10 @@
+bokeh==2.4.3
+numpy
+pandas
+streamlit
+umap-learn
+pacmap
+hdbscan==0.8.28
+requests
+matplotlib
+plotly
