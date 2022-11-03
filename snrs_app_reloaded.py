@@ -19,12 +19,11 @@ from bokeh.io import curdoc
 
 from utils import read_experiments_metadata, perform_clustering
 
-
 import pathlib 
 import shutil
 from PIL import Image
 
-DATA_FOLDER = "data"    
+DATA_FOLDER = "data_demo"    
 
 EMBEDDINGS_FILE = "embeddings.json"
 METADATA_FILE = "metadata.json"
@@ -142,7 +141,7 @@ with c1:
 
         with st.container():
             if visualization_prereduction_method == "UMAP":
-                vis_pre_reduction_n_neighbors = st.slider('Number of neighbors', step = 5, min_value = 5, max_value = 100, value = 15, disabled=not(visualization_prereduction_check))
+                vis_pre_reduction_n_neighbors = st.slider('Number of neighbors', key = "vis_pre_reduction_n_neighbors1", step = 5, min_value = 5, max_value = 100, value = 15, disabled=not(visualization_prereduction_check))
 
             elif visualization_prereduction_method == "PCA":
                 st.write('No more parameters for PCA')
@@ -429,48 +428,48 @@ if single_compute:
 """---"""
 st.markdown('## 3.Grid search')
 
-with st.form("GridSearch"):
-    ce, c1, ce, c2, ce = st.columns([0.07, 1, 0.15, 1, 0.07])
 
-    with c1:
-        reduction_grid_search_check = st.checkbox("Reduction grid search", value=False)
-        grid_visualization_prereduction_method = st.selectbox(
-        'Reduction type',
-        ('UMAP', ''),
-        disabled=not(reduction_grid_search_check)
-        )
+ce, c1, ce, c2, ce = st.columns([0.07, 1, 0.15, 1, 0.07])
 
-        grid_neighbor = st.slider('Select a range of neighbors', 5, 100, (5, 50), step=5, disabled=not(reduction_grid_search_check))
-        grid_dist = st.slider('Select a range of distances', 0.0, 0.9, (0.0, 0.6), step=0.1, disabled=not(reduction_grid_search_check))
+with c1:
+    reduction_grid_search_check = st.checkbox("Reduction grid search", value=False)
+    grid_visualization_prereduction_method = st.selectbox(
+    'Reduction type',
+    ('UMAP', ''),
+    disabled=not(reduction_grid_search_check)
+    )
 
-    with c2:
-        cluster_grid_search_check = st.checkbox("Clustering grid search", value=False)
-        clustering_grid_method = st.selectbox(
-            'Clustering type',
-            ('kmeans', 'dbscan', 'hdbscan', 'affinity propagation', 'agglomerative clustering'),
-            key="clus_type_2",
-            disabled=not(cluster_grid_search_check)
-        )
-        if cluster_grid_search_check:
-            with st.container():
-                grid_clus_params={}
-                if clustering_grid_method == "kmeans":
-                    grid_clus_params["K"] = st.slider('Number of cluster', key="K2", step = 1, min_value = 2, max_value = 20, value = 5)
+    grid_neighbor = st.slider('Select a range of neighbors', 5, 100, (5, 50), step=5, disabled=not(reduction_grid_search_check))
+    grid_dist = st.slider('Select a range of distances', 0.0, 0.9, (0.0, 0.6), step=0.1, disabled=not(reduction_grid_search_check))
 
-                elif clustering_grid_method == "dbscan":
-                    grid_clus_params["eps"] = st.slider('Eps', key="eps", step = 0.05, min_value = 0.0, max_value = 1.0, value = 0.1)
-                    grid_clus_params["min_samples"] = st.slider('Min samples', key="min_samples2", step = 1, min_value = 2, max_value = 50, value = 5)
-                    
-                elif clustering_grid_method == "hdbscan":
-                    grid_clus_params["min_cluster_size"] = st.slider('Min cluster size', key="min_cluster_size2", step = 1, min_value = 2, max_value = 50, value = 5)
+with c2:
+    cluster_grid_search_check = st.checkbox("Clustering grid search", value=False)
+    clustering_grid_method = st.selectbox(
+        'Clustering type',
+        ('kmeans', 'dbscan', 'hdbscan', 'affinity propagation', 'agglomerative clustering'),
+        key="clus_type_2",
+        disabled=not(cluster_grid_search_check)
+    )
+    if cluster_grid_search_check:
+        with st.container():
+            grid_clus_params={}
+            if clustering_grid_method == "kmeans":
+                grid_clus_params["K"] = st.slider('Number of cluster', key="K2", step = 1, min_value = 2, max_value = 20, value = 5)
 
-                elif clustering_grid_method == 'affinity propagation':
-                    st.write('No parameters for Affinity Propagation')
+            elif clustering_grid_method == "dbscan":
+                grid_clus_params["eps"] = st.slider('Eps', key="eps", step = 0.05, min_value = 0.0, max_value = 1.0, value = 0.1)
+                grid_clus_params["min_samples"] = st.slider('Min samples', key="min_samples2", step = 1, min_value = 2, max_value = 50, value = 5)
+                
+            elif clustering_grid_method == "hdbscan":
+                grid_clus_params["min_cluster_size"] = st.slider('Min cluster size', key="min_cluster_size2", step = 1, min_value = 2, max_value = 50, value = 5)
 
-                elif clustering_grid_method == 'agglomerative clustering':
-                    grid_clus_params["n_clusters"] = st.slider('Number of clusters', key='n_clusters2', step =1, min_value = 2, max_value = 20, value = 5)
+            elif clustering_grid_method == 'affinity propagation':
+                st.write('No parameters for Affinity Propagation')
 
-    cgs = st.form_submit_button("Compute grid search")
+            elif clustering_grid_method == 'agglomerative clustering':
+                grid_clus_params["n_clusters"] = st.slider('Number of clusters', key='n_clusters2', step =1, min_value = 2, max_value = 20, value = 5)
+
+cgs = st.button("Compute grid search")
 
 if cgs:
     st.write('neighbors: '  , min(grid_neighbor), '  ', max(grid_neighbor),  'distances: ', min(grid_dist), '  ', max(grid_dist))

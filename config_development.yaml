@@ -1,0 +1,10 @@
+DATA_FOLDER = "data_demo"    
+
+EMBEDDINGS_FILE = "embeddings.json"
+METADATA_FILE = "metadata.json"
+LABELS_FILE = "labels.json"
+IMAGES_FOLDER = "images"
+GENERATED_FOLDER = "generated"
+
+SELECT_EXPERIMENT_TEXT = 'Choose data'
+SELECT_EXPERIMENT_KEY = "experiment"
