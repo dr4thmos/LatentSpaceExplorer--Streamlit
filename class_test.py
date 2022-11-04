@@ -7,29 +7,17 @@ import os
 import numpy as np
 import pandas as pd
 
-exp = Experiment()
+exp = Experiment(data_folder="data_demo")
 
-DATA_FOLDER = "data_demo"    
-
-EMBEDDINGS_FILE = "embeddings.json"
-METADATA_FILE = "metadata.json"
-LABELS_FILE = "labels.json"
-IMAGES_FOLDER = "images"
-GENERATED_FOLDER = "generated"
-
-experiments = read_experiments_metadata(DATA_FOLDER, METADATA_FILE)
+exp.read_experiments_metadata()
 
 st.markdown("### 1.Choose a latent space")
 exp.latent_space_folder = st.selectbox(
-            'Choose data',
-            tuple(experiments)
-        )
+        'Choose data',
+        tuple(exp.latent_spaces_list)
+    )
 
-EXPERIMENT_FOLDER = os.path.join(DATA_FOLDER, exp.latent_space_folder)
-EMBEDDINGS_PATH = os.path.join(EXPERIMENT_FOLDER, EMBEDDINGS_FILE)
-LABELS_PATH = os.path.join(EXPERIMENT_FOLDER, LABELS_FILE)
-IMAGE_PATH = os.path.join(EXPERIMENT_FOLDER, IMAGES_FOLDER)
-GEN_PATH = os.path.join(EXPERIMENT_FOLDER, GENERATED_FOLDER)
+exp.set_current_latent_space_path()
 
 with st.container():
     st.write('Clustering')
@@ -38,6 +26,34 @@ with st.container():
         'Clustering type',
         ('kmeans', 'dbscan', 'hdbscan', 'affinity propagation', 'agglomerative clustering')
     )
+
+### ------------------------ Reduction container
+
+with st.container():
+    st.write('Reduction')
+
+    exp.reduction_hyp_param["method"] = st.selectbox(
+        'Reduction type',
+        ('PCA','UMAP', 'PACMAP')
+    )
+
+    exp.reduction_hyp_param["dimensions"] = st.number_input('Output dimensions', value = 2, min_value = 2, max_value = 2)
+
+    with st.container():
+        if exp.reduction_hyp_param["method"] == "PCA":
+            st.write('No more parameters for PCA')
+
+        elif exp.reduction_hyp_param["method"] == "UMAP":
+            exp.reduction_hyp_param["n_neighbors"] = st.slider('Number of neighbors', min_value = 5, max_value = 100, step = 5, value = 15)
+            exp.reduction_hyp_param["min_distance"] = st.slider('Minimum distance between points', step = 0.05, min_value = 0.0, max_value = 1.0, value = 0.1)
+            
+        elif exp.reduction_hyp_param["method"] == "PACMAP":
+            st.write('No parameters for PACMAP for now')
+            exp.reduction_hyp_param["n_neighbors"] = st.slider('Number of neighbors', min_value = 5, max_value = 100, step = 5, value = 15)
+            exp.reduction_hyp_param["MN_ratio"] = st.slider('Attraction between near points', step = 0.1, min_value = 0.1, max_value = 2.0, value = 0.5)
+            exp.reduction_hyp_param["FP_ratio"] = st.slider('Repulsion between distance points', step = 0.5, min_value = 0.5, max_value = 5.0, value = 2.0)
+
+### ------------------------ Clustering container
 
 with st.container():
     if exp.clustering_hyp_param["method"] == "kmeans":
@@ -56,28 +72,20 @@ with st.container():
     elif exp.clustering_hyp_param["method"] == 'agglomerative clustering':
         exp.clustering_hyp_param["n_clusters"] = st.slider('Number of clusters', key='n_clusters1', step =1, min_value = 2, max_value = 20, value = 5)
 
-
 ### ------------------------
 
-with open(EMBEDDINGS_PATH, "r") as file:
-    exp.data_representation = np.array(json.load(file))
-with open(LABELS_PATH, "r") as file:
-    labels_data = json.load(file)
-
-images = labels_data['columns']
-labels = np.array(labels_data['data'])
-labels = labels.flatten()
+exp.load_experiment_data()
 
 df_image_paths = pd.DataFrame(
     {
         'image_path' : map(
-            lambda image: os.path.join(exp.latent_space_folder, IMAGES_FOLDER, image), 
-            images
+            lambda image: os.path.join(exp.images_path, image), 
+            exp.data_images
             )
     })
 #print(df_image_paths.head())
 
-df_images_filename = pd.DataFrame({'image': images})
+df_images_filename = pd.DataFrame({'image': exp.data_images})
 df_images_filename = df_images_filename.join(df_image_paths)
 #print(df_images_filename.head())
 
@@ -85,56 +93,24 @@ df_images_filename = df_images_filename.join(df_image_paths)
 df_gen_paths = pd.DataFrame(
     {
         'gen_path' : map(
-            lambda image: os.path.join(exp.latent_space_folder, GENERATED_FOLDER,image), 
-            images
+            lambda image: os.path.join(exp.generated_images_path, image), 
+            exp.data_images
             )
     })
-
+#print(df_gen_paths.head())
 exp.calculate_clusters()
 
-st.write(exp.clusters)
-#print(df_gen_paths.head())
+st.write(exp.data_clusters)
+
+exp.calculate_reduction()
+st.write(exp.data_reduction)
+
+df_embedding = pd.DataFrame(exp.data_reduction)
+
+if exp.reduction_hyp_param["dimensions"] == 2:
+    df_embedding = df_embedding.rename(columns={0:"x", 1:"y"})
+if exp.reduction_hyp_param["dimensions"] == 3:
+    df_embedding = df_embedding.rename(columns={0:"x", 1:"y", 2:"z"})
 
 # Visualization
-# reduce()
-# if visualization_prereduction_check:
-#     st.write('Visualization Pre-Reduction: ', visualization_prereduction_method)
-#     if visualization_prereduction_method == "UMAP":
-#         reducer = umap.UMAP(n_neighbors=vis_pre_reduction_n_neighbors, min_dist=0, n_components=vis_pre_reduction_components)
-#     elif visualization_prereduction_method == "PCA":
-#         reducer = PCA(n_components=vis_pre_reduction_components)
-#     viz_data = reducer.fit_transform(embeddings_data)
-# else:
-#     viz_data = embeddings_data
-
-# #st.write('Reduction: ', visualization_reduction_method)
-# if visualization_reduction_method == "UMAP":
-#     reducer = umap.UMAP(n_neighbors=vis_reduction_UMAP_n_neighbors, min_dist=vis_reduction_UMAP_min_distance, n_components=vis_reduction_components)
-# elif visualization_reduction_method == "PACMAP":
-#     reducer = pacmap.PaCMAP(n_components=vis_reduction_components, n_neighbors=vis_reduction_PACMAP_n_neighbors, MN_ratio=vis_reduction_PACMAP_MN_ratio, FP_ratio=vis_reduction_PACMAP_FP_ratio)
-# elif visualization_reduction_method == 'PCA':
-#     reducer = PCA(n_components=2)
-# embedding = reducer.fit_transform(viz_data)
-
-# df_embedding = pd.DataFrame(embedding)
-
-# if vis_reduction_components == 2:
-#     df_embedding = df_embedding.rename(columns={0:"x", 1:"y"})
-# if vis_reduction_components == 3:
-#     df_embedding = df_embedding.rename(columns={0:"x", 1:"y", 2:"z"})
-
-# # Clustering
-# # clustering()
-# if clustering_prereduction_check:
-    
-#     st.write('Clustering Pre-Reduction: ', clustering_prereduction_method)
-#     if clustering_prereduction_method == "UMAP":
-#         reducer = umap.UMAP(n_neighbors=clustering_prereduction_n_neighbors, min_dist=0, n_components=clustering_prereduction_components)
-#         clus_data = reducer.fit_transform(embeddings_data)
-#     elif clustering_prereduction_method == 'PCA':
-#         reducer = PCA(n_components=clustering_prereduction_components)
-#         clus_data = reducer.fit_transform(embeddings_data)
-#     clusters = perform_clustering(clus_data, clustering_method, clus_params)
-# else:
-
 
