@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 import numpy as np
 
+from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.cluster import KMeans, DBSCAN, AffinityPropagation, AgglomerativeClustering
 from sklearn.decomposition import PCA
 import hdbscan
@@ -49,6 +50,17 @@ class Experiment:
     data_images:            list = None
     data_reduction:              np.ndarray = None
     data_clusters:               np.ndarray = None
+
+    # Metrics
+    metric_repr_silhouette: float = -1.
+    metric_repr_calinski_harabasz: float = -1.
+    metric_repr_davies_bouldin: float = -1.
+    metric_reduct_silhouette: float = -1.
+    metric_reduct_calinski_harabasz: float = -1.
+    metric_reduct_davies_bouldin: float = -1.
+
+    def create_dataframe(self):
+        return None
 
     def load_experiment_data(self):
         """
@@ -102,6 +114,23 @@ class Experiment:
             clusterer = AgglomerativeClustering(n_clusters=self.clustering_hyp_param["n_clusters"])
 
         self.data_clusters = clusterer.fit_predict(self.data_representation)
+
+    def calculate_clustering_metrics(self):
+        """"""
+        if np.unique(self.data_clusters).size > 1:
+            self.metric_repr_silhouette = silhouette_score(self.data_representation, self.data_clusters)
+            self.metric_repr_calinski_harabasz = calinski_harabasz_score(self.data_representation, self.data_clusters)
+            self.metric_repr_davies_bouldin = davies_bouldin_score(self.data_representation, self.data_clusters)
+            self.metric_reduct_silhouette = silhouette_score(self.data_reduction, self.data_clusters)
+            self.metric_reduct_calinski_harabasz = calinski_harabasz_score(self.data_reduction, self.data_clusters)
+            self.metric_reduct_davies_bouldin = davies_bouldin_score(self.data_reduction, self.data_clusters)
+        else:
+            self.metric_repr_silhouette = -1
+            self.metric_repr_calinski_harabasz = -1
+            self.metric_repr_davies_bouldin = -1
+            self.metric_reduct_silhouette = -1
+            self.metric_reduct_calinski_harabasz = -1
+            self.metric_reduct_davies_bouldin = -1
 
     def calculate_reduction(self):
         """"""

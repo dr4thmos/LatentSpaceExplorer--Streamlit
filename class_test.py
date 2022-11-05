@@ -72,7 +72,7 @@ with st.container():
     elif exp.clustering_hyp_param["method"] == 'agglomerative clustering':
         exp.clustering_hyp_param["n_clusters"] = st.slider('Number of clusters', key='n_clusters1', step =1, min_value = 2, max_value = 20, value = 5)
 
-### ------------------------
+### ------------------------ Calculate
 
 exp.load_experiment_data()
 
@@ -88,7 +88,6 @@ df_image_paths = pd.DataFrame(
 df_images_filename = pd.DataFrame({'image': exp.data_images})
 df_images_filename = df_images_filename.join(df_image_paths)
 #print(df_images_filename.head())
-
 
 df_gen_paths = pd.DataFrame(
     {
@@ -113,4 +112,3 @@ if exp.reduction_hyp_param["dimensions"] == 3:
     df_embedding = df_embedding.rename(columns={0:"x", 1:"y", 2:"z"})
 
 # Visualization
-
