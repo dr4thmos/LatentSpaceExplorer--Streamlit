@@ -34,7 +34,7 @@ GENERATED_FOLDER = "generated"
 SELECT_EXPERIMENT_TEXT = 'Choose data'
 SELECT_EXPERIMENT_KEY = "experiment"
 
-DEV = True
+DEV = False
 
 ### Move Images on Streamlit static folder in order to make it available in frontend (bokeh)
 if not(DEV):
