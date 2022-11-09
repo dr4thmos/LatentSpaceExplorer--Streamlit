@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from collections import defaultdict
 import numpy as np
 import math
+import itertools  
 
 from sklearn.metrics import silhouette_score, calinski_harabasz_score, davies_bouldin_score
 from sklearn.cluster import KMeans, DBSCAN, AffinityPropagation, AgglomerativeClustering
@@ -39,8 +40,8 @@ class Experiment:
     generated_images_folder:    str = "generated"
     
     # Dynamic folders/files name
-    latent_spaces_list: defaultdict[dict] = field(default_factory=lambda: defaultdict(dict)) 
-    latent_space_folder: str = ""
+    latent_spaces_list:         defaultdict[dict] = field(default_factory=lambda: defaultdict(dict)) 
+    latent_space_folder:        str = ""
 
     # Paths
     latent_space_path: str      = ""
@@ -61,32 +62,39 @@ class Experiment:
     data_representation:    np.ndarray = None
     data_labels:            np.ndarray = None
     data_images:            list = None
-    data_reduction:              np.ndarray = None
-    data_clusters:               np.ndarray = None
+    data_reduction:         np.ndarray = None
+    data_precluster:        np.ndarray = None
+    data_clusters:          np.ndarray = None
 
     # Metrics
-    metric_repr_silhouette: float = -1.
-    metric_repr_calinski_harabasz: float = -1.
-    metric_repr_davies_bouldin: float = -1.
-    metric_reduct_silhouette: float = -1.
-    metric_reduct_calinski_harabasz: float = -1.
-    metric_reduct_davies_bouldin: float = -1.
+    metric_repr_silhouette:             float = -1.
+    metric_repr_calinski_harabasz:      float = -1.
+    metric_repr_davies_bouldin:         float = -1.
+    metric_reduct_silhouette:           float = -1.
+    metric_reduct_calinski_harabasz:    float = -1.
+    metric_reduct_davies_bouldin:       float = -1.
 
     # Aggregate columnar dataframe for rich plotting in bokeh
-    aggregated_info: DataFrame = None
-    bokeh_figure: figure = None
-    grid_figure_reduction: plt = None
-    grid_figure_clustering: plt = None
+    aggregated_info:            DataFrame = None
+    bokeh_figure:               figure = None
+    grid_figure_reduction:      plt = None
+    grid_figure_clustering:     plt = None
+    grid_figure_clustering_N2D: plt = None
     
     def calculate_grid_clustering(self):
+        if self.clustering_grid_search_hyp_param["reduction"] == "PCA":
+            reducer = PCA(n_components=2)
+            reduction = reducer.fit_transform(self.data_representation)
+
         if self.clustering_grid_search_hyp_param["method"] == "kmeans":
             K = self.clustering_grid_search_hyp_param["K"]
             K_range=[
                 min(K),
-                (min(K) + max(K))/2,
+                int((min(K) + max(K))/2),
                 max(K)
             ]
-            fig, axs = plt.subplots(nrows=1, ncols=len(K_range), figsize=(10, 10), constrained_layout=True)
+            figsize = 3
+            fig, axs = plt.subplots(nrows=1, ncols=len(K_range), figsize=(figsize*len(K_range), figsize), constrained_layout=True)
             fig.text(0.5, -0.03, 'K', ha='center', fontsize='medium')
             for ncol, K_iter in enumerate(K_range):
                 clusterer = KMeans(n_clusters=K_iter)
@@ -95,7 +103,7 @@ class Experiment:
                     color = [Category10[10][i+1] for i in clusters]
                 else:
                     color = [Category20[20][i+1] for i in clusters]
-                axs[ncol].scatter(self.data_reduction[:,0], self.data_reduction[:,1], c=color, s=10, cmap='Spectral')
+                axs[ncol].scatter(reduction[:,0], reduction[:,1], c=color, s=10, cmap='Spectral')
                 axs[ncol].set_yticklabels([])
                 axs[ncol].set_xticklabels([])
                 axs[ncol].set_title('K={} '.format(K_iter), fontsize=8)
@@ -126,17 +134,171 @@ class Experiment:
                         color = [Category10[10][i+1] for i in clusters]
                     else:
                         color = [Category20[20][i+1] for i in clusters]
-                    axs[nrow, ncol].scatter(self.data_reduction[:,0], self.data_reduction[:,1], c=color, s=10, cmap='Spectral')
+                    axs[nrow, ncol].scatter(reduction[:,0], reduction[:,1], c=color, s=10, cmap='Spectral')
                     axs[nrow, ncol].set_yticklabels([])
                     axs[nrow, ncol].set_xticklabels([])
                     axs[nrow, ncol].set_title('eps={} '.format(eps_iter) + 'min_sample={}'.format(min_sample_iter), fontsize=8)
             self.grid_figure_clustering = fig
             
         elif self.clustering_grid_search_hyp_param["method"] == "hdbscan":
-            return None
+            min_cluster_size = self.clustering_grid_search_hyp_param["min_cluster_size"]
+            min_cluster_size_range=[
+                min(min_cluster_size),
+                int((min(min_cluster_size) + max(min_cluster_size))/2),
+                max(min_cluster_size)
+            ]
+            figsize = 3
+            fig, axs = plt.subplots(nrows=1, ncols=len(min_cluster_size_range), figsize=(figsize*len(min_cluster_size_range), figsize), constrained_layout=True)
+            fig.text(0.5, -0.03, 'Min cluster size', ha='center', fontsize='medium')
+            for ncol, min_cluster_size_iter in enumerate(min_cluster_size_range):
+                clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size_iter)
+                clusters = clusterer.fit_predict(self.data_representation)
+                if np.unique(clusters).size < 10:
+                    color = [Category10[10][i+1] for i in clusters]
+                else:
+                    color = [Category20[20][i+1] for i in clusters]
+                axs[ncol].scatter(reduction[:,0], reduction[:,1], c=color, s=10, cmap='Spectral')
+                axs[ncol].set_yticklabels([])
+                axs[ncol].set_xticklabels([])
+                axs[ncol].set_title('Min cluster size={} '.format(min_cluster_size_iter), fontsize=8)
+            self.grid_figure_clustering = fig
 
         elif self.clustering_grid_search_hyp_param["method"] == 'agglomerative clustering':
-            return None
+            
+            n_clusters = self.clustering_grid_search_hyp_param["n_clusters"]
+            n_clusters_range=[
+                min(n_clusters),
+                int((min(n_clusters) + max(n_clusters))/2),
+                max(n_clusters)
+            ]
+            figsize = 3
+            fig, axs = plt.subplots(nrows=1, ncols=len(n_clusters_range), figsize=(figsize*len(n_clusters_range), figsize), constrained_layout=True)
+            fig.text(0.5, -0.03, 'Min cluster size', ha='center', fontsize='medium')
+            for ncol, n_clusters_iter in enumerate(n_clusters_range):
+                clusterer = AgglomerativeClustering(n_clusters=n_clusters_iter)
+                clusters = clusterer.fit_predict(self.data_representation)
+                if np.unique(clusters).size < 10:
+                    color = [Category10[10][i+1] for i in clusters]
+                else:
+                    color = [Category20[20][i+1] for i in clusters]
+                axs[ncol].scatter(reduction[:,0], reduction[:,1], c=color, s=10, cmap='Spectral')
+                axs[ncol].set_yticklabels([])
+                axs[ncol].set_xticklabels([])
+                axs[ncol].set_title('N clusters={} '.format(n_clusters_iter), fontsize=8)
+            self.grid_figure_clustering = fig
+
+    def calculate_grid_clustering_N2D(self):
+        if self.clustering_grid_search_hyp_param["reduction"] == "PCA":
+            reducer = PCA(n_components=2)
+            reduction = reducer.fit_transform(self.data_representation)
+
+        n2d_reducer = umap.UMAP(n_components=self.clustering_grid_search_hyp_param["prereduction"]["n_components"], n_neighbors=self.clustering_grid_search_hyp_param["prereduction"]["n_neighbors"], min_dist=0.0, random_state=42)
+        n2d_reduction = n2d_reducer.fit_transform(self.data_representation)
+
+        if self.clustering_grid_search_hyp_param["method"] == "kmeans":
+            K = self.clustering_grid_search_hyp_param["K"]
+            K_range=[
+                min(K),
+                int((min(K) + max(K))/2),
+                max(K)
+            ]
+            figsize = 3
+            fig, axs = plt.subplots(nrows=1, ncols=len(K_range), figsize=(figsize*len(K_range), figsize), constrained_layout=True)
+            fig.text(0.5, -0.03, 'K', ha='center', fontsize='medium')
+            for ncol, K_iter in enumerate(K_range):
+                clusterer = KMeans(n_clusters=K_iter)
+                clusters = clusterer.fit_predict(n2d_reduction)
+                if np.unique(clusters).size < 10:
+                    color = [Category10[10][i+1] for i in clusters]
+                else:
+                    color = [Category20[20][i+1] for i in clusters]
+                axs[ncol].scatter(reduction[:,0], reduction[:,1], c=color, s=10, cmap='Spectral')
+                axs[ncol].set_yticklabels([])
+                axs[ncol].set_xticklabels([])
+                axs[ncol].set_title('K={} '.format(K_iter), fontsize=8)
+            self.grid_figure_clustering = fig
+
+        elif self.clustering_grid_search_hyp_param["method"] == "dbscan":
+            eps = self.clustering_grid_search_hyp_param["eps"]
+            min_sample = self.clustering_grid_search_hyp_param["min_samples"]
+            eps_range=[
+                min(eps),
+                (min(eps) + max(eps))/2,
+                max(eps)
+            ]
+            min_sample_range=[
+                min(min_sample),
+                math.floor((min(min_sample)+max(min_sample))/2),
+                max(min_sample)]
+            fig, axs = plt.subplots(nrows=len(eps_range), ncols=len(min_sample_range), figsize=(10, 10), constrained_layout=True)
+            fig.text(0.5, -0.03, 'eps', ha='center', fontsize='medium')
+            fig.text(-0.03, 0.5, 'min_sample', va='center', rotation='vertical', fontsize='medium')
+            fig.text(0.5, 1.03, 'eps', ha='center', fontsize='medium')
+            fig.text(1.03, 0.5, 'min_sample', va='center', rotation='vertical', fontsize='medium')
+            for nrow, eps_iter in enumerate(eps_range):
+                for ncol, min_sample_iter in enumerate(min_sample_range):
+                    clusterer = DBSCAN(eps=eps_iter, min_samples=min_sample_iter, metric='euclidean')
+                    clusters = clusterer.fit_predict(n2d_reduction)
+                    if np.unique(clusters).size < 10:
+                        color = [Category10[10][i+1] for i in clusters]
+                    elif np.unique(clusters).size < 20:
+                        color = [Category20[20][i+1] for i in clusters]
+                    else:
+                        color = clusters
+                    axs[nrow, ncol].scatter(reduction[:,0], reduction[:,1], c=color, s=10, cmap='Spectral')
+                    axs[nrow, ncol].set_yticklabels([])
+                    axs[nrow, ncol].set_xticklabels([])
+                    axs[nrow, ncol].set_title('eps={} '.format(eps_iter) + 'min_sample={}'.format(min_sample_iter), fontsize=8)
+            self.grid_figure_clustering = fig
+            
+        elif self.clustering_grid_search_hyp_param["method"] == "hdbscan":
+            min_cluster_size = self.clustering_grid_search_hyp_param["min_cluster_size"]
+            min_cluster_size_range=[
+                min(min_cluster_size),
+                int((min(min_cluster_size) + max(min_cluster_size))/2),
+                max(min_cluster_size)
+            ]
+            figsize = 3
+            fig, axs = plt.subplots(nrows=1, ncols=len(min_cluster_size_range), figsize=(figsize*len(min_cluster_size_range), figsize), constrained_layout=True)
+            fig.text(0.5, -0.03, 'Min cluster size', ha='center', fontsize='medium')
+            for ncol, min_cluster_size_iter in enumerate(min_cluster_size_range):
+                clusterer = hdbscan.HDBSCAN(min_cluster_size=min_cluster_size_iter)
+                clusters = clusterer.fit_predict(n2d_reduction)
+                if np.unique(clusters).size < 10:
+                    color = [Category10[10][i+1] for i in clusters]
+                elif np.unique(clusters).size < 20:
+                    color = [Category20[20][i+1] for i in clusters]
+                else:
+                    color = clusters
+                axs[ncol].scatter(reduction[:,0], reduction[:,1], c=color, s=10, cmap='Spectral')
+                axs[ncol].set_yticklabels([])
+                axs[ncol].set_xticklabels([])
+                axs[ncol].set_title('Min cluster size={} '.format(min_cluster_size_iter), fontsize=8)
+            self.grid_figure_clustering = fig
+
+        elif self.clustering_grid_search_hyp_param["method"] == 'agglomerative clustering':
+            
+            n_clusters = self.clustering_grid_search_hyp_param["n_clusters"]
+            n_clusters_range=[
+                min(n_clusters),
+                int((min(n_clusters) + max(n_clusters))/2),
+                max(n_clusters)
+            ]
+            figsize = 3
+            fig, axs = plt.subplots(nrows=1, ncols=len(n_clusters_range), figsize=(figsize*len(n_clusters_range), figsize), constrained_layout=True)
+            fig.text(0.5, -0.03, 'Min cluster size', ha='center', fontsize='medium')
+            for ncol, n_clusters_iter in enumerate(n_clusters_range):
+                clusterer = AgglomerativeClustering(n_clusters=n_clusters_iter)
+                clusters = clusterer.fit_predict(n2d_reduction)
+                if np.unique(clusters).size < 10:
+                    color = [Category10[10][i+1] for i in clusters]
+                else:
+                    color = [Category20[20][i+1] for i in clusters]
+                axs[ncol].scatter(reduction[:,0], reduction[:,1], c=color, s=10, cmap='Spectral')
+                axs[ncol].set_yticklabels([])
+                axs[ncol].set_xticklabels([])
+                axs[ncol].set_title('N clusters={} '.format(n_clusters_iter), fontsize=8)
+            self.grid_figure_clustering_N2D = fig
 
     def calculate_grid_reduction(self):
         grid_neighbor = self.reduction_grid_search_hyp_param["grid_neighbor"]
@@ -313,7 +475,12 @@ class Experiment:
         elif self.clustering_hyp_param["method"] == 'agglomerative clustering':
             clusterer = AgglomerativeClustering(n_clusters=self.clustering_hyp_param["n_clusters"])
 
-        self.data_clusters = clusterer.fit_predict(self.data_representation)
+        if self.preclustering_hyp_param["check"]:
+            reducer = umap.UMAP(n_neighbors=self.preclustering_hyp_param["n_neighbors"], min_dist=self.preclustering_hyp_param["min_distance"], n_components=self.preclustering_hyp_param["dimensions"])
+            self.data_precluster = reducer.fit_transform(self.data_representation)
+            self.data_clusters = clusterer.fit_predict(self.data_precluster)
+        else:
+            self.data_clusters = clusterer.fit_predict(self.data_representation)
 
     def calculate_clustering_metrics(self):
         """"""

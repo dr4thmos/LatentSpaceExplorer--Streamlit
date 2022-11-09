@@ -9,3 +9,5 @@ requests
 matplotlib
 plotly
 joblib==1.1.0
+pyssim
+scikit-image
