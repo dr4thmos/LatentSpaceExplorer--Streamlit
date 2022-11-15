@@ -28,15 +28,19 @@ DEV = False
 
 # ### Move Images on Streamlit static folder in order to make it available in frontend (bokeh)
 if not(DEV):
-    STREAMLIT_STATIC_PATH = pathlib.Path(st.__path__[0]) / 'static'
+    STREAMLIT_STATIC_PATH = pathlib.Path(st.__path__[0]) / 'static' 
+    DATA_FOLDER = STREAMLIT_STATIC_PATH / exp.data_folder
     print(STREAMLIT_STATIC_PATH)
+
+    if not os.path.isdir(os.path.join(DATA_FOLDER)):
+        os.mkdir(os.path.join(DATA_FOLDER))
     # We create a videos directory within the streamlit static asset directory
     # and we write output files to it
 
     for experiment in os.listdir(exp.data_folder):
-        STATIC_IMAGES_PATH = (os.path.join(STREAMLIT_STATIC_PATH, experiment, exp.images_folder))
-        if not os.path.isdir(os.path.join(STREAMLIT_STATIC_PATH, experiment)):
-            os.mkdir(os.path.join(STREAMLIT_STATIC_PATH, experiment))
+        STATIC_IMAGES_PATH = (os.path.join(DATA_FOLDER, experiment, exp.images_folder))
+        if not os.path.isdir(os.path.join(DATA_FOLDER, experiment)):
+            os.mkdir(os.path.join(DATA_FOLDER, experiment))
         
         if not os.path.isdir(STATIC_IMAGES_PATH):
             os.mkdir(STATIC_IMAGES_PATH)
@@ -44,7 +48,7 @@ if not(DEV):
         for image in os.listdir(os.path.join(exp.data_folder, experiment, exp.images_folder)):
             shutil.copy(os.path.join(exp.data_folder, experiment, exp.images_folder, image), STATIC_IMAGES_PATH)  # For newer Python.
 
-        STATIC_GENERATED_PATH = (os.path.join(STREAMLIT_STATIC_PATH, experiment, exp.generated_images_folder))
+        STATIC_GENERATED_PATH = (os.path.join(DATA_FOLDER, experiment, exp.generated_images_folder))
 
         if not os.path.isdir(STATIC_GENERATED_PATH):
             os.mkdir(STATIC_GENERATED_PATH)
