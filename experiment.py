@@ -32,7 +32,7 @@ class Experiment:
     """Class for keeping track of experiment configuration"""
 
     # Static folders/files name
-    data_folder:                str = "data"
+    data_folder:                str = "data-demo"
     representations_filename:   str = "embeddings.json"
     metadata_filename:          str = "metadata.json"
     labels_filename:            str = "labels.json"

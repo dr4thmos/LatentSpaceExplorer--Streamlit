@@ -2,7 +2,8 @@ from experiment import Experiment
 import numpy as np
 import itertools
 
-from skimage.metrics import structural_similarity as ssim
+#from skimage.metrics import structural_similarity as ssim
+
 
 import streamlit as st
 
@@ -10,12 +11,46 @@ import time
 
 from PIL import Image
 
+import pathlib
+import os
+import shutil
+
+from ssim import SSIM
+
 st.set_page_config(layout="wide")
 st.set_option('deprecation.showPyplotGlobalUse', False)
 
-exp = Experiment(data_folder="data_demo")
+exp = Experiment(data_folder="data")
 
 exp.read_experiments_metadata()
+
+DEV = False
+
+# ### Move Images on Streamlit static folder in order to make it available in frontend (bokeh)
+if not(DEV):
+    STREAMLIT_STATIC_PATH = pathlib.Path(st.__path__[0]) / 'static'
+    print(STREAMLIT_STATIC_PATH)
+    # We create a videos directory within the streamlit static asset directory
+    # and we write output files to it
+
+    for experiment in os.listdir(exp.data_folder):
+        STATIC_IMAGES_PATH = (os.path.join(STREAMLIT_STATIC_PATH, experiment, exp.images_folder))
+        if not os.path.isdir(os.path.join(STREAMLIT_STATIC_PATH, experiment)):
+            os.mkdir(os.path.join(STREAMLIT_STATIC_PATH, experiment))
+        
+        if not os.path.isdir(STATIC_IMAGES_PATH):
+            os.mkdir(STATIC_IMAGES_PATH)
+
+        for image in os.listdir(os.path.join(exp.data_folder, experiment, exp.images_folder)):
+            shutil.copy(os.path.join(exp.data_folder, experiment, exp.images_folder, image), STATIC_IMAGES_PATH)  # For newer Python.
+
+        STATIC_GENERATED_PATH = (os.path.join(STREAMLIT_STATIC_PATH, experiment, exp.generated_images_folder))
+
+        if not os.path.isdir(STATIC_GENERATED_PATH):
+            os.mkdir(STATIC_GENERATED_PATH)
+
+        for image in os.listdir(os.path.join(exp.data_folder, experiment, exp.generated_images_folder)):
+            shutil.copy(os.path.join(exp.data_folder, experiment, exp.generated_images_folder, image), STATIC_GENERATED_PATH)  # For newer Python.
 
 
 st.sidebar.markdown("### 1.Choose a latent space")
@@ -204,19 +239,20 @@ if check_analysis == 'Interactive':
                     count+=1
                     #print(reference_image)
                     #print(compare_image)
-                    reference_image = np.array(Image.open(reference_image))
+                    reference_image = Image.open(reference_image)
                     compare_image = Image.open(compare_image)
                     ssim_angle_max = 0.
                     for angle in range(0,365,5):
-                        rotated_compare_image = np.array(compare_image.rotate(angle))
+                        rotated_compare_image = compare_image.rotate(angle)
                         ### DEBUG method
                         # c1, c2, c3 = st.columns(3)
                         # with c1:
                         #     st.image(reference_image)
                         # with c2:
                         #     st.image(rotated_compare_image)
-                        # time.sleep(2)
-                        ssim_value = ssim(reference_image, rotated_compare_image, channel_axis=2)
+                        
+                        #ssim_value = ssim(reference_image, rotated_compare_image, channel_axis=2)
+                        ssim_value = SSIM(reference_image).cw_ssim_value(rotated_compare_image)
                         ssim_angle_max = max(ssim_value, ssim_angle_max)
                         # with c3:
                         #     st.write(round(ssim_value,2))
@@ -224,7 +260,7 @@ if check_analysis == 'Interactive':
                     ssim_sum = ssim_sum + ssim_angle_max
                     #print(ssim_sum)
                 ssim_avg = ssim_sum / count
-                st.write(ssim_avg)
+                #st.write(ssim_avg)
                 ssim_list.append(ssim_avg)
 
         ### ------------------------ Clusters
