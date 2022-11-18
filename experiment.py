@@ -510,4 +510,9 @@ class Experiment:
         elif self.reduction_hyp_param["method"] == 'PCA':
             reducer = PCA(n_components=self.reduction_hyp_param["dimensions"])
         
-        self.data_reduction = reducer.fit_transform(self.data_representation)
+        if self.preclustering_hyp_param["check"]:
+            prereducer = umap.UMAP(n_neighbors=self.preclustering_hyp_param["n_neighbors"], min_dist=self.preclustering_hyp_param["min_distance"], n_components=self.preclustering_hyp_param["dimensions"])
+            data_prereduction = prereducer.fit_transform(self.data_representation)
+            self.data_reduction = reducer.fit_transform(data_prereduction)
+        else:
+            self.data_reduction = reducer.fit_transform(self.data_representation)
