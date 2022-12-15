@@ -417,12 +417,17 @@ class Experiment:
         df_clusters = pd.DataFrame(self.data_clusters)
         df_clusters = df_clusters.rename(columns={0:"clusters"})
         
+        
+        df_embedding = df_embedding.join(df_clusters)
+        
         df_embedding = df_embedding.join(df_images_filename)
         df_embedding = df_embedding.join(df_image_paths)
-        df_embedding = df_embedding.join(df_clusters)
         df_embedding = df_embedding.join(df_gen_paths)
 
         self.aggregated_info = df_embedding
+
+        #self.aggregated_info[['x', 'y', 'clusters']].to_csv("data_slim.csv",index=False)
+        #self.aggregated_info.to_csv("data_full.csv",index=False)
 
     def load_experiment_data(self):
         """
@@ -476,7 +481,7 @@ class Experiment:
             clusterer = AgglomerativeClustering(n_clusters=self.clustering_hyp_param["n_clusters"])
 
         if self.preclustering_hyp_param["check"]:
-            reducer = umap.UMAP(n_neighbors=self.preclustering_hyp_param["n_neighbors"], min_dist=self.preclustering_hyp_param["min_distance"], n_components=self.preclustering_hyp_param["dimensions"])
+            reducer = umap.UMAP(n_neighbors=self.preclustering_hyp_param["n_neighbors"], min_dist=self.preclustering_hyp_param["min_distance"], n_components=self.preclustering_hyp_param["dimensions"], random_state=42)
             self.data_precluster = reducer.fit_transform(self.data_representation)
             self.data_clusters = clusterer.fit_predict(self.data_precluster)
         else:
@@ -511,7 +516,7 @@ class Experiment:
             reducer = PCA(n_components=self.reduction_hyp_param["dimensions"])
         
         if self.preclustering_hyp_param["check"]:
-            prereducer = umap.UMAP(n_neighbors=self.preclustering_hyp_param["n_neighbors"], min_dist=self.preclustering_hyp_param["min_distance"], n_components=self.preclustering_hyp_param["dimensions"])
+            prereducer = umap.UMAP(n_neighbors=self.preclustering_hyp_param["n_neighbors"], min_dist=self.preclustering_hyp_param["min_distance"], n_components=self.preclustering_hyp_param["dimensions"], random_state=42)
             data_prereduction = prereducer.fit_transform(self.data_representation)
             self.data_reduction = reducer.fit_transform(data_prereduction)
         else:

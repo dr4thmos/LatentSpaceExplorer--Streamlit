@@ -3,10 +3,7 @@ import numpy as np
 import itertools
 
 #from skimage.metrics import structural_similarity as ssim
-
-
 import streamlit as st
-
 import time
 
 from PIL import Image
@@ -229,6 +226,12 @@ if check_analysis == 'Interactive':
 
         ### ------------------------ Visualization
         st.bokeh_chart(exp.bokeh_figure, use_container_width=True)
+
+        st.download_button(label="Download data as CSV",
+            data=exp.aggregated_info[['x', 'y', 'clusters']].to_csv(index=False).encode('utf-8'),
+            file_name='plot_data.csv',
+            mime='text/csv',
+        )
         
         if ssim_check:
             ssim_list = []
