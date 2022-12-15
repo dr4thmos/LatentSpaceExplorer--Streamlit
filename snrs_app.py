@@ -105,6 +105,7 @@ if check_analysis == 'Interactive':
                 exp.preclustering_hyp_param["dimensions"] = st.slider('Number of dimensions', key="predim", min_value = 2, max_value = 32, step = 2, value = 8)
             with c2:
                 exp.preclustering_hyp_param["n_neighbors"] = st.slider('Number of neighbors', key="preneigh", min_value = 5, max_value = 100, step = 5, value = 15)
+            exp.preclustering_hyp_param["metric"] = st.selectbox('Metric', ('euclidean', 'cosine'), key="Metric_pre")
             exp.preclustering_hyp_param["min_distance"] = 0.0
 
         ### ------------------------ Clustering container
@@ -121,6 +122,7 @@ if check_analysis == 'Interactive':
         elif exp.clustering_hyp_param["method"] == "dbscan":
             exp.clustering_hyp_param["eps"] = st.slider('Eps', key="eps1", step = 0.05, min_value = 0.05, max_value = 1.0, value = 0.1)
             exp.clustering_hyp_param["min_samples"] = st.slider('Min samples', key="min_samples1", step = 1, min_value = 2, max_value = 50, value = 5)
+            exp.clustering_hyp_param["metric"] = st.selectbox('Metric', ('euclidean', 'cosine'), key="Metric2")
             
         elif exp.clustering_hyp_param["method"] == "hdbscan":
             exp.clustering_hyp_param["min_cluster_size"] = st.slider('Min cluster size', key="min_cluster_size1", step = 1, min_value = 2, max_value = 50, value = 5)
@@ -171,6 +173,7 @@ elif check_analysis == 'Grid search clustering':
         elif exp.clustering_grid_search_hyp_param["method"] == "dbscan":
             exp.clustering_grid_search_hyp_param["eps"] = st.slider('Eps', key="eps", step = 0.05, min_value = 0.05, max_value = 1.0, value = (0.05, 0.5))
             exp.clustering_grid_search_hyp_param["min_samples"] = st.slider('Min samples', key="min_samples2", step = 1, min_value = 2, max_value = 50, value = (2, 10))
+            exp.clustering_grid_search_hyp_param["metric"] = st.selectbox('Metric', ('euclidean', 'cosine'), key="Metric1")
             
         elif exp.clustering_grid_search_hyp_param["method"] == "hdbscan":
             exp.clustering_grid_search_hyp_param["min_cluster_size"] = st.slider('Min cluster size', key="min_cluster_size2", step = 1, min_value = 2, max_value = 50, value = (2, 5))

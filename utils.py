@@ -22,7 +22,7 @@ def perform_clustering(data, method, params):
         clusterer = KMeans(n_clusters=params["K"])
 
     elif method == "dbscan":
-        clusterer = DBSCAN(eps=params["eps"], min_samples=params["min_samples"], metric='euclidean')
+        clusterer = DBSCAN(eps=params["eps"], min_samples=params["min_samples"], metric=params["metric"])
         
 
     elif method == "hdbscan":
